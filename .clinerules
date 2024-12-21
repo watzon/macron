@@ -1,0 +1,2 @@
+- Use `go doc` when unsure about a signature. In most cases it should be used the first time you make a syntactical error.
+- The editor handles adding and removing imports most of the time, so if you add imports and they get removed it's because they're not needed.

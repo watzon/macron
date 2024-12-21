@@ -1,0 +1,85 @@
+{"level":"info","ts":1734751307.4517078,"logger":"conn.mtproto.rpc","msg":"Initialized","v":"v0.116.0","conn_id":0,"dc_id":2,"retry_interval":5,"max_retries":5}
+{"level":"info","ts":1734751307.4518037,"msg":"Starting","v":"v0.116.0"}
+{"level":"info","ts":1734751307.4520667,"msg":"Connection restored from state","v":"v0.116.0","addr":"","key_id":"8f8146443681bdaa"}
+{"level":"info","ts":1734751307.452075,"logger":"conn.mtproto.rpc","msg":"Initialized","v":"v0.116.0","conn_id":0,"dc_id":1,"retry_interval":5,"max_retries":5}
+{"level":"debug","ts":1734751307.4521458,"logger":"conn.mtproto","msg":"Run: start","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"info","ts":1734751307.5127797,"logger":"conn.mtproto","msg":"Key already exists","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"debug","ts":1734751307.5128064,"logger":"conn.mtproto","msg":"Generating new session id","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"debug","ts":1734751307.51291,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"readLoop"}
+{"level":"debug","ts":1734751307.5129168,"logger":"conn.mtproto.read","msg":"Read loop started","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"debug","ts":1734751307.5129309,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"userCallback"}
+{"level":"debug","ts":1734751307.512934,"logger":"conn","msg":"Initializing","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"debug","ts":1734751307.5129356,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"ackLoop"}
+{"level":"debug","ts":1734751307.5129466,"logger":"conn.mtproto","msg":"Invoke start","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5129628,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"pingLoop"}
+{"level":"debug","ts":1734751307.5129638,"logger":"conn.mtproto.rpc","msg":"Do called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.512971,"logger":"conn.mtproto.rpc","msg":"Waiting for acknowledge","v":"v0.116.0","conn_id":0,"dc_id":1,"ack_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5129771,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"handleClose"}
+{"level":"debug","ts":1734751307.512994,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xda9b0d0d","type_name":"invokeWithLayer#da9b0d0d","msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5130017,"logger":"conn.mtproto.group","msg":"Task started","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"saltsLoop"}
+{"level":"debug","ts":1734751307.5748034,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x73f1f8dc","type_name":"message_container","size_bytes":88,"msg_id":7450700132603739141}
+{"level":"debug","ts":1734751307.5748217,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x9ec20908","type_name":"new_session_created#9ec20908","size_bytes":28,"msg_id":7450700132603739141}
+{"level":"debug","ts":1734751307.5748286,"logger":"conn.mtproto","msg":"Session created","v":"v0.116.0","conn_id":0,"dc_id":1,"unique_id":-685415094625431985,"first_msg_id":7450700130771201316,"first_msg_time":1734751307.5129454}
+{"level":"info","ts":1734751307.5748332,"logger":"conn","msg":"SessionInit","v":"v0.116.0","conn_id":0,"dc_id":1}
+{"level":"debug","ts":1734751307.5748422,"logger":"conn.mtproto","msg":"Invoke start","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.5748663,"logger":"conn.mtproto.rpc","msg":"Do called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.5748715,"logger":"conn.mtproto.rpc","msg":"Waiting for acknowledge","v":"v0.116.0","conn_id":0,"dc_id":1,"ack_id":7450700130833097160}
+{"level":"debug","ts":1734751307.5748787,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xd91a548","type_name":"users.getUsers#d91a548","msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.5749311,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xb921bd04","type_name":"get_future_salts#b921bd04","msg_id":7450700130833162744}
+{"level":"debug","ts":1734751307.5797994,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xf35c6d01","type_name":"rpc_result","size_bytes":508,"msg_id":7450700132624850945}
+{"level":"debug","ts":1734751307.5798154,"logger":"conn.mtproto","msg":"Handle result","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x3072cfa1","type_name":"gzip","size_bytes":496,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5798802,"logger":"conn.mtproto","msg":"Decompressed","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xcc1a241e","type_name":"config#cc1a241e","size_bytes":1076,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5798845,"logger":"conn.mtproto.rpc","msg":"Handler called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5799134,"logger":"conn.mtproto","msg":"Invoke end","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.5799189,"logger":"conn.mtproto.group","msg":"Task complete","v":"v0.116.0","conn_id":0,"dc_id":1,"task":"userCallback","elapsed":0.066991679}
+{"level":"debug","ts":1734751307.5799308,"msg":"Ready","v":"v0.116.0"}
+{"level":"debug","ts":1734751307.5800505,"logger":"conn.mtproto","msg":"Invoke start","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.5800827,"logger":"conn.mtproto.rpc","msg":"Do called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.5800881,"logger":"conn.mtproto.rpc","msg":"Waiting for acknowledge","v":"v0.116.0","conn_id":0,"dc_id":1,"ack_id":7450700130838304260}
+{"level":"debug","ts":1734751307.5800977,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xd91a548","type_name":"users.getUsers#d91a548","msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.6064374,"msg":"Data saved","v":"v0.116.0","key_id":"8f8146443681bdaa"}
+{"level":"debug","ts":1734751307.6064641,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x62d6b459","type_name":"msgs_ack#62d6b459","size_bytes":20,"msg_id":7450700132603739141}
+{"level":"debug","ts":1734751307.6064913,"logger":"conn.mtproto","msg":"Received ack","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_ids":[7450700130771201316]}
+{"level":"debug","ts":1734751307.6064951,"logger":"conn.mtproto.rpc","msg":"Acknowledge callback not set","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130771201316}
+{"level":"debug","ts":1734751307.637138,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x73f1f8dc","type_name":"message_container","size_bytes":144,"msg_id":7450700132872119305}
+{"level":"debug","ts":1734751307.6371758,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xae500895","type_name":"future_salts#ae500895","size_bytes":84,"msg_id":7450700132872119305}
+{"level":"debug","ts":1734751307.637185,"logger":"conn.mtproto","msg":"Got future salts","v":"v0.116.0","conn_id":0,"dc_id":1,"server_time":1734751307}
+{"level":"debug","ts":1734751307.6371899,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x62d6b459","type_name":"msgs_ack#62d6b459","size_bytes":20,"msg_id":7450700132872119305}
+{"level":"debug","ts":1734751307.6371934,"logger":"conn.mtproto","msg":"Received ack","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_ids":[7450700130833097160]}
+{"level":"debug","ts":1734751307.637203,"logger":"conn.mtproto.rpc.retry","msg":"Acknowledged","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.6543794,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x73f1f8dc","type_name":"message_container","size_bytes":204,"msg_id":7450700132945637381}
+{"level":"debug","ts":1734751307.6544075,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xf35c6d01","type_name":"rpc_result","size_bytes":144,"msg_id":7450700132945637381}
+{"level":"debug","ts":1734751307.6544144,"logger":"conn.mtproto","msg":"Handle result","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x1cb5c415","size_bytes":132,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.6544185,"logger":"conn.mtproto.rpc","msg":"Handler called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.654436,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x62d6b459","type_name":"msgs_ack#62d6b459","size_bytes":20,"msg_id":7450700132945637381}
+{"level":"debug","ts":1734751307.6544464,"logger":"conn.mtproto","msg":"Received ack","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_ids":[7450700130838304260]}
+{"level":"debug","ts":1734751307.654454,"logger":"conn.mtproto.rpc.retry","msg":"Acknowledged","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.6544619,"logger":"conn.mtproto","msg":"Invoke end","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130833097160}
+{"level":"debug","ts":1734751307.654465,"logger":"conn","msg":"Invoke","v":"v0.116.0","conn_id":0,"dc_id":1,"duration":0.202330317,"ongoing":1}
+{"level":"info","ts":1734751307.6544697,"msg":"Got self","v":"v0.116.0","username":"watzon"}
+{"level":"debug","ts":1734751307.6583781,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xf35c6d01","type_name":"rpc_result","size_bytes":144,"msg_id":7450700132964190209}
+{"level":"debug","ts":1734751307.6583986,"logger":"conn.mtproto","msg":"Handle result","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x1cb5c415","size_bytes":132,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.6584046,"logger":"conn.mtproto.rpc","msg":"Handler called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.6584249,"logger":"conn.mtproto","msg":"Invoke end","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130838304260}
+{"level":"debug","ts":1734751307.658429,"logger":"conn","msg":"Invoke","v":"v0.116.0","conn_id":0,"dc_id":1,"duration":0.078382466,"ongoing":0}
+{"level":"debug","ts":1734751307.6584392,"logger":"conn.mtproto","msg":"Invoke start","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.6584437,"logger":"conn.mtproto.rpc","msg":"Do called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.658449,"logger":"conn.mtproto.rpc","msg":"Waiting for acknowledge","v":"v0.116.0","conn_id":0,"dc_id":1,"ack_id":7450700130916694672}
+{"level":"debug","ts":1734751307.6584604,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xd91a548","type_name":"users.getUsers#d91a548","msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.7582307,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0xf35c6d01","type_name":"rpc_result","size_bytes":144,"msg_id":7450700133386608641}
+{"level":"debug","ts":1734751307.758263,"logger":"conn.mtproto","msg":"Handle result","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x1cb5c415","size_bytes":132,"msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.7582679,"logger":"conn.mtproto.rpc","msg":"Handler called","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.7582908,"logger":"conn.mtproto","msg":"Invoke end","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_id":7450700130916694672}
+{"level":"debug","ts":1734751307.7582946,"logger":"conn","msg":"Invoke","v":"v0.116.0","conn_id":0,"dc_id":1,"duration":0.09985718,"ongoing":0}
+{"level":"info","ts":1734751307.7583158,"msg":"Registering modules..."}
+{"level":"info","ts":1734751307.7583485,"msg":"Starting client..."}
+{"level":"debug","ts":1734751308.3863351,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x78d4dec1","type_name":"updateShort#78d4dec1","size_bytes":28,"msg_id":7450700136091028481}
+{"level":"debug","ts":1734751310.9715645,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x3072cfa1","type_name":"gzip","size_bytes":324,"msg_id":7450700147188822017}
+{"level":"debug","ts":1734751310.9716272,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x74ae4240","type_name":"updates#74ae4240","size_bytes":368,"msg_id":7450700147188822017}
+{"level":"warn","ts":1734751310.9717636,"logger":"conn.mtproto","msg":"Error while handling message","v":"v0.116.0","conn_id":0,"dc_id":1,"error":"continued"}
+{"level":"debug","ts":1734751317.4537451,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x78d4dec1","type_name":"updateShort#78d4dec1","size_bytes":28,"msg_id":7450700175032786945}
+{"level":"debug","ts":1734751318.0789194,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x78d4dec1","type_name":"updateShort#78d4dec1","size_bytes":28,"msg_id":7450700177717989377}
+{"level":"debug","ts":1734751322.5165393,"logger":"conn.mtproto","msg":"Request","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x62d6b459","type_name":"msgs_ack#62d6b459","msg_id":7450700195199247552}
+{"level":"debug","ts":1734751322.516629,"logger":"conn.mtproto.ack","msg":"Ack","v":"v0.116.0","conn_id":0,"dc_id":1,"msg_ids":[7450700132624850945,7450700132964190209,7450700133386608641,7450700136091028481,7450700147188822017,7450700175032786945,7450700177717989377]}
+{"level":"debug","ts":1734751342.4029434,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x3072cfa1","type_name":"gzip","size_bytes":312,"msg_id":7450700282188339201}
+{"level":"debug","ts":1734751342.4029932,"logger":"conn.mtproto","msg":"Handle message","v":"v0.116.0","conn_id":0,"dc_id":1,"type_id":"0x74ae4240","type_name":"updates#74ae4240","size_bytes":344,"msg_id":7450700282188339201}

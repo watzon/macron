@@ -1,0 +1,25 @@
+# Environment variables
+.env
+
+# Session files
+*.session
+*.session-journal
+session.json
+
+# IDE files
+.idea/
+.vscode/
+
+# Build files
+/build
+/dist
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
