@@ -5,6 +5,7 @@
 *.session
 *.session-journal
 session.json
+/session
 
 # IDE files
 .idea/

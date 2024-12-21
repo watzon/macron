@@ -8,6 +8,7 @@ import (
 	"github.com/celestix/gotgproto/ext"
 	"github.com/celestix/gotgproto/functions"
 	"github.com/celestix/gotgproto/types"
+	"github.com/watzon/hdur"
 )
 
 // ArgumentType represents the type of value an argument accepts
@@ -18,8 +19,9 @@ const (
 	TypeInt
 	TypeFloat
 	TypeBool
-	TypeEntity // For resolving usernames/phone-numbers/ids
-	TypeReply  // For accessing replied-to message content
+	TypeEntity   // For resolving usernames/phone-numbers/ids
+	TypeReply    // For accessing replied-to message content
+	TypeDuration // For parsing human-readable duration strings
 )
 
 // ArgumentKind represents how an argument is specified in the command
@@ -214,6 +216,16 @@ func (a *Arguments) GetBool(name string) bool {
 	return false
 }
 
+// GetDuration returns the hdur.Duration value of a named argument
+func (a *Arguments) GetDuration(name string) hdur.Duration {
+	if v := a.Get(name); v != nil {
+		if d, ok := v.(hdur.Duration); ok {
+			return d
+		}
+	}
+	return hdur.Duration{}
+}
+
 // GetEntity returns the raw value of a named entity argument
 func (a *Arguments) GetEntity(name string) string {
 	if arg, ok := a.Named[name]; ok {
@@ -289,6 +301,16 @@ func (a *Arguments) GetPositionalBool(index int) bool {
 	return false
 }
 
+// GetPositionalDuration returns the hdur.Duration value of a positional argument
+func (a *Arguments) GetPositionalDuration(index int) hdur.Duration {
+	if v := a.GetPositional(index); v != nil {
+		if d, ok := v.(hdur.Duration); ok {
+			return d
+		}
+	}
+	return hdur.Duration{}
+}
+
 // GetVariadic returns all variadic arguments
 func (a *Arguments) GetVariadic() []interface{} {
 	values := make([]interface{}, len(a.Variadic))
@@ -315,6 +337,12 @@ func parseValue(value string, argType ArgumentType) (interface{}, error) {
 	case TypeReply:
 		// Reply type doesn't use the value parameter, it's handled by storing the reply message in Arguments.Reply
 		return nil, nil
+	case TypeDuration:
+		d, err := hdur.ParseDuration(value)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
 	default:
 		return nil, fmt.Errorf("unsupported argument type")
 	}

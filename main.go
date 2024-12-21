@@ -52,8 +52,9 @@ func main() {
 		cfg.AppHash,
 		gotgproto.ClientTypePhone(cfg.Phone),
 		&gotgproto.ClientOpts{
-			Session: sessionMaker.SqlSession(sqlite.Open(filepath.Join(cfg.SessionDir, "session.db"))),
-			Logger:  lg,
+			Session:        sessionMaker.SqlSession(sqlite.Open(filepath.Join(cfg.SessionDir, "session.db"))),
+			Logger:         lg,
+			AutoFetchReply: true,
 		},
 	)
 	if err != nil {
