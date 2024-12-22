@@ -91,6 +91,7 @@ func main() {
 	registry.AddModule(modules.NewMiscModule())
 	registry.AddModule(modules.NewUserModule())
 	registry.AddModule(modules.NewExecModule())
+	registry.AddModule(modules.NewSystemModule())
 
 	// Register all modules with the dispatcher
 	lg.Info("Registering modules...")
