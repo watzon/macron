@@ -9,6 +9,7 @@ import (
 	"github.com/celestix/gotgproto/parsemode"
 	"github.com/celestix/gotgproto/types"
 	"github.com/gotd/td/tg"
+	"github.com/watzon/hdur"
 	"github.com/watzon/macron/command"
 	"github.com/watzon/macron/utilities"
 )
@@ -30,6 +31,10 @@ func NewUserModule() *UserModule {
 	// Add commands to the module
 	m.AddCommand(user)
 	m.AddCommand(ban)
+	m.AddCommand(mute)
+	m.AddCommand(unmute)
+	m.AddCommand(unban)
+	m.AddCommand(kick)
 
 	return m
 }
@@ -219,43 +224,20 @@ var ban = command.NewCommand("ban").
 	).
 	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
 		// Get user from argument or reply
-		var basicUser *types.User
-		var err error
-
-		// Check if a user argument was provided
-		if args.GetPositionalEntity(0) != "" {
-			// Try to resolve user from the provided argument
-			basicUser, err = utilities.ResolveUser(ctx, args.GetPositionalEntity(0))
-			if err != nil {
-				return fmt.Errorf("failed to resolve user: %v", err)
-			}
-		} else if args.Reply != nil {
-			// Try to get the user from the replied message
-			if args.Reply.Message != nil {
-				basicUser, err = utilities.UserFromMessage(ctx, args.Reply.Message)
-				if err != nil {
-					return fmt.Errorf("failed to get user from replied message: %v", err)
-				}
-			} else {
-				return fmt.Errorf("could not get replied message")
-			}
-		} else {
-			return fmt.Errorf("please provide a username/ID or reply to a message")
+		basicUser, err := utilities.GetUserFromArgs(ctx, args)
+		if err != nil {
+			return err
 		}
 
 		// Get ban duration if provided
 		duration := args.GetDuration("duration")
-		var untilDate int64
-		if !duration.IsZero() {
-			untilDate = duration.Add(time.Now()).Unix()
-		}
 
 		chat := u.EffectiveChat()
 
 		// Ban the user
-		_, err = ctx.BanChatMember(chat.GetID(), basicUser.ID, int(untilDate))
+		err = utilities.BanUser(ctx, chat.GetID(), basicUser.ID, duration)
 		if err != nil {
-			return fmt.Errorf("failed to ban user: %v", err)
+			return fmt.Errorf("failed to ban user: %w", err)
 		}
 
 		if args.GetBool("delete") {
@@ -287,4 +269,194 @@ var ban = command.NewCommand("ban").
 		}
 
 		return nil
+	})
+
+var mute = command.NewCommand("mute").
+	WithUsage("mute [username/id]").
+	WithDescription("Mute a user in the chat using their username/ID or by replying to a message.").
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "user",
+			Type:        command.TypeEntity,
+			Kind:        command.KindPositional,
+			Required:    false,
+			Description: "Username or ID of the user (optional if replying to a message)",
+		},
+		command.ArgumentDefinition{
+			Name:        "duration",
+			Type:        command.TypeDuration,
+			Kind:        command.KindNamed,
+			Required:    false,
+			Description: "Duration of the mute (eg: 3d, 1w, 7m)",
+		},
+		command.ArgumentDefinition{
+			Name:        "reply",
+			Type:        command.TypeReply,
+			Required:    false,
+			Description: "Reply to a message to mute its sender",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		// Get user from argument or reply
+		basicUser, err := utilities.GetUserFromArgs(ctx, args)
+		if err != nil {
+			return err
+		}
+
+		// Get mute duration if provided
+		duration := args.GetDuration("duration")
+
+		chat := u.EffectiveChat()
+
+		var untilDate int64
+		if !duration.IsZero() {
+			untilDate = duration.Add(time.Now()).Unix()
+		}
+
+		// Mute the user
+		err = utilities.RestrictUser(ctx, chat.GetID(), basicUser.ID, tg.ChatBannedRights{
+			UntilDate:    int(untilDate),
+			ViewMessages: true,
+			SendMessages: true,
+			SendMedia:    true,
+			SendStickers: true,
+			SendGifs:     true,
+			SendGames:    true,
+			SendInline:   true,
+			EmbedLinks:   true,
+			SendPolls:    true,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to mute user: %w", err)
+		}
+
+		// Send confirmation message
+		durationText := "permanently"
+		if !duration.IsZero() {
+			durationText = fmt.Sprintf("for %s", duration.String())
+		}
+		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("✅ Muted %s %s", utilities.FormatUserName(basicUser), durationText)), &ext.ReplyOpts{})
+		return err
+	})
+
+var unmute = command.NewCommand("unmute").
+	WithUsage("unmute [username/id]").
+	WithDescription("Unmute a user in the chat using their username/ID or by replying to a message.").
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "user",
+			Type:        command.TypeEntity,
+			Kind:        command.KindPositional,
+			Required:    false,
+			Description: "Username or ID of the user (optional if replying to a message)",
+		},
+		command.ArgumentDefinition{
+			Name:        "reply",
+			Type:        command.TypeReply,
+			Required:    false,
+			Description: "Reply to a message to unmute its sender",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		// Get user from argument or reply
+		basicUser, err := utilities.GetUserFromArgs(ctx, args)
+		if err != nil {
+			return err
+		}
+
+		chat := u.EffectiveChat()
+
+		// Unmute the user
+		err = utilities.RestrictUser(ctx, chat.GetID(), basicUser.ID, tg.ChatBannedRights{
+			UntilDate: 0,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to unmute user: %w", err)
+		}
+
+		// Send confirmation message
+		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("✅ Unmuted %s", utilities.FormatUserName(basicUser))), &ext.ReplyOpts{})
+		return err
+	})
+
+var unban = command.NewCommand("unban").
+	WithUsage("unban [username/id]").
+	WithDescription("Unban a user from the chat using their username/ID or by replying to a message.").
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "user",
+			Type:        command.TypeEntity,
+			Kind:        command.KindPositional,
+			Required:    false,
+			Description: "Username or ID of the user (optional if replying to a message)",
+		},
+		command.ArgumentDefinition{
+			Name:        "reply",
+			Type:        command.TypeReply,
+			Required:    false,
+			Description: "Reply to a message to unban its sender",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		// Get user from argument or reply
+		basicUser, err := utilities.GetUserFromArgs(ctx, args)
+		if err != nil {
+			return err
+		}
+
+		chat := u.EffectiveChat()
+
+		// Unban the user
+		err = utilities.UnbanUser(ctx, chat.GetID(), basicUser.ID)
+		if err != nil {
+			return fmt.Errorf("failed to unban user: %w", err)
+		}
+
+		// Send confirmation message
+		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("✅ Unbanned %s", utilities.FormatUserName(basicUser))), &ext.ReplyOpts{})
+		return err
+	})
+
+var kick = command.NewCommand("kick").
+	WithUsage("kick [username/id]").
+	WithDescription("Kick a user from the chat using their username/ID or by replying to a message.").
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "user",
+			Type:        command.TypeEntity,
+			Kind:        command.KindPositional,
+			Required:    false,
+			Description: "Username or ID of the user (optional if replying to a message)",
+		},
+		command.ArgumentDefinition{
+			Name:        "reply",
+			Type:        command.TypeReply,
+			Required:    false,
+			Description: "Reply to a message to kick its sender",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		// Get user from argument or reply
+		basicUser, err := utilities.GetUserFromArgs(ctx, args)
+		if err != nil {
+			return err
+		}
+
+		chat := u.EffectiveChat()
+
+		// Ban the user
+		err = utilities.BanUser(ctx, chat.GetID(), basicUser.ID, hdur.Duration{})
+		if err != nil {
+			return fmt.Errorf("failed to ban user: %w", err)
+		}
+
+		// Unban the user
+		err = utilities.UnbanUser(ctx, chat.GetID(), basicUser.ID)
+		if err != nil {
+			return fmt.Errorf("failed to unban user: %w", err)
+		}
+
+		// Send confirmation message
+		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("✅ Kicked %s", utilities.FormatUserName(basicUser))), &ext.ReplyOpts{})
+		return err
 	})

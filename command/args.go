@@ -30,7 +30,6 @@ type ArgumentKind int
 const (
 	KindPositional ArgumentKind = iota
 	KindNamed
-	KindVariadic
 )
 
 // ArgumentDefinition defines an expected argument for a command
@@ -64,7 +63,7 @@ func (e *ArgumentError) Error() string {
 type Arguments struct {
 	Positional []ParsedArgument
 	Named      map[string]ParsedArgument
-	Variadic   []ParsedArgument
+	Rest       *ParsedArgument // Holds all remaining text after flags and positional args
 	Raw        string
 	Reply      *types.Message // Holds the replied-to message if present
 }
@@ -129,43 +128,36 @@ func (a *Arguments) ResolvePositionalEntity(ctx *ext.Context, index int) (*types
 	return nil, fmt.Errorf("entity argument not found at index: %d", index)
 }
 
-// ResolveVariadicEntities attempts to resolve all variadic entity arguments to Telegram users
-func (a *Arguments) ResolveVariadicEntities(ctx *ext.Context) ([]*types.User, error) {
-	raws := a.GetVariadicEntities()
-	if len(raws) == 0 {
+// ResolveRestEntity attempts to resolve the rest entity argument to a Telegram user
+func (a *Arguments) ResolveRestEntity(ctx *ext.Context) (*types.User, error) {
+	raw := a.GetRest()
+	if raw == "" {
 		return nil, nil
 	}
 
-	users := make([]*types.User, 0, len(raws))
-	for _, raw := range raws {
-		// Try username resolution first (with or without @ prefix)
-		username := strings.TrimPrefix(raw, "@")
-		if chat, err := ctx.ResolveUsername(username); err == nil {
-			if user, ok := chat.(*types.User); ok {
-				users = append(users, user)
-				continue
-			}
+	// Try username resolution first (with or without @ prefix)
+	username := strings.TrimPrefix(raw, "@")
+	if chat, err := ctx.ResolveUsername(username); err == nil {
+		if user, ok := chat.(*types.User); ok {
+			return user, nil
 		}
+	}
 
-		// Try as numeric ID
-		if id, err := strconv.ParseInt(raw, 10, 64); err == nil {
-			// Get input peer from ID
-			peer := functions.GetInputPeerClassFromId(ctx.PeerStorage, id)
-			if peer != nil {
-				// Try to resolve using the peer
-				if chat, err := ctx.ResolveUsername(fmt.Sprint(id)); err == nil {
-					if user, ok := chat.(*types.User); ok {
-						users = append(users, user)
-						continue
-					}
+	// Try as numeric ID
+	if id, err := strconv.ParseInt(raw, 10, 64); err == nil {
+		// Get input peer from ID
+		peer := functions.GetInputPeerClassFromId(ctx.PeerStorage, id)
+		if peer != nil {
+			// Try to resolve using the peer
+			if chat, err := ctx.ResolveUsername(fmt.Sprint(id)); err == nil {
+				if user, ok := chat.(*types.User); ok {
+					return user, nil
 				}
 			}
 		}
-
-		return nil, fmt.Errorf("could not resolve entity: %s", raw)
 	}
 
-	return users, nil
+	return nil, fmt.Errorf("could not resolve entity: %s", raw)
 }
 
 // Get returns the value of a named argument
@@ -242,15 +234,6 @@ func (a *Arguments) GetPositionalEntity(index int) string {
 	return ""
 }
 
-// GetVariadicEntities returns the raw values of all variadic entity arguments
-func (a *Arguments) GetVariadicEntities() []string {
-	values := make([]string, len(a.Variadic))
-	for i, arg := range a.Variadic {
-		values[i] = arg.RawValue
-	}
-	return values
-}
-
 // GetPositional returns the value of a positional argument by index
 func (a *Arguments) GetPositional(index int) interface{} {
 	if index >= 0 && index < len(a.Positional) {
@@ -311,13 +294,17 @@ func (a *Arguments) GetPositionalDuration(index int) hdur.Duration {
 	return hdur.Duration{}
 }
 
-// GetVariadic returns all variadic arguments
-func (a *Arguments) GetVariadic() []interface{} {
-	values := make([]interface{}, len(a.Variadic))
-	for i, arg := range a.Variadic {
-		values[i] = arg.Value
+// GetRest returns any remaining unparsed text
+func (a *Arguments) GetRest() string {
+	if a.Rest != nil {
+		return a.Rest.RawValue
 	}
-	return values
+	return ""
+}
+
+// GetRestString is an alias for GetRest for backward compatibility
+func (a *Arguments) GetRestString() string {
+	return a.GetRest()
 }
 
 // parseValue attempts to parse a string value into the specified type
@@ -350,122 +337,212 @@ func parseValue(value string, argType ArgumentType) (interface{}, error) {
 
 // ParseArguments parses command arguments according to the provided definitions
 func ParseArguments(text string, defs []ArgumentDefinition, msg *types.Message) (*Arguments, error) {
-	// Split the command text into parts
-	parts := strings.Fields(text)
-
 	args := &Arguments{
-		Positional: make([]ParsedArgument, 0),
 		Named:      make(map[string]ParsedArgument),
-		Variadic:   make([]ParsedArgument, 0),
+		Positional: make([]ParsedArgument, 0),
 		Raw:        text,
+		Reply:      msg,
 	}
 
-	// Track current position and found named args
+	// Initialize runes for character-by-character parsing
+	runes := []rune(text)
 	pos := 0
-	namedFound := make(map[string]bool)
+	length := len(runes)
 
-	// First pass: Handle named arguments
-	for i := 0; i < len(parts); i++ {
-		part := parts[i]
-		if strings.HasPrefix(part, "-") {
-			name := strings.TrimPrefix(part, "-")
+	// Skip initial whitespace
+	for pos < length && runes[pos] == ' ' {
+		pos++
+	}
 
-			// Find the argument definition
+	// Count positional definitions
+	var positionalCount int
+	for _, def := range defs {
+		if def.Kind == KindPositional {
+			positionalCount++
+		}
+	}
+
+	var positionalIndex int
+
+	// Parse arguments in a single pass
+	for pos < length {
+		// Skip whitespace
+		for pos < length && runes[pos] == ' ' {
+			pos++
+		}
+		if pos >= length {
+			break
+		}
+
+		// Check for named argument
+		if runes[pos] == '-' && (pos == 0 || runes[pos-1] == ' ') {
+			start := pos
+			pos++ // Skip dash
+
+			// Read flag name
+			var name strings.Builder
+			for pos < length && runes[pos] != ' ' && runes[pos] != '\n' && runes[pos] != '=' {
+				name.WriteRune(runes[pos])
+				pos++
+			}
+
+			// Find matching named definition
 			var def *ArgumentDefinition
 			for _, d := range defs {
-				if d.Kind == KindNamed && d.Name == name {
+				if d.Kind == KindNamed && d.Name == name.String() {
 					def = &d
 					break
 				}
 			}
 
-			if def == nil {
-				return nil, &ArgumentError{name, "unknown named argument"}
+			if def != nil {
+				// Skip equals sign or whitespace if present
+				if pos < length && (runes[pos] == '=' || runes[pos] == ' ' || runes[pos] == '\n') {
+					pos++
+				}
+
+				// For boolean flags, always treat as flag without value
+				if def.Type == TypeBool {
+					args.Named[def.Name] = ParsedArgument{
+						Name:     def.Name,
+						Value:    true,
+						RawValue: "true",
+					}
+					continue
+				}
+
+				// Parse value
+				var value string
+				if pos < length && runes[pos] == '"' {
+					pos++ // Skip opening quote
+					var builder strings.Builder
+					for pos < length && runes[pos] != '"' {
+						if runes[pos] == '\\' && pos+1 < length {
+							pos++
+						}
+						builder.WriteRune(runes[pos])
+						pos++
+					}
+					if pos < length {
+						pos++ // Skip closing quote
+					}
+					value = builder.String()
+				} else {
+					var builder strings.Builder
+					for pos < length && runes[pos] != ' ' {
+						builder.WriteRune(runes[pos])
+						pos++
+					}
+					value = builder.String()
+				}
+
+				parsedValue, err := parseValue(value, def.Type)
+				if err != nil {
+					return nil, &ArgumentError{def.Name, err.Error()}
+				}
+				args.Named[def.Name] = ParsedArgument{
+					Name:     def.Name,
+					Value:    parsedValue,
+					RawValue: value,
+				}
+				continue
+			} else {
+				// Not a valid flag, try as positional
+				pos = start
+			}
+		}
+
+		// Try to parse as positional
+		if pos < length {
+			// If we've found all positional arguments, collect rest
+			if positionalIndex >= positionalCount {
+				// Skip any leading whitespace
+				for pos < length && runes[pos] == ' ' {
+					pos++
+				}
+				if pos < length {
+					rest := strings.TrimSpace(string(runes[pos:]))
+					if rest != "" {
+						args.Rest = &ParsedArgument{
+							Name:     "rest",
+							Value:    rest,
+							RawValue: rest,
+						}
+					}
+				}
+				break
 			}
 
-			// For boolean flags, presence implies true unless explicitly set
-			if def.Type == TypeBool {
-				// Check if next part exists and could be a boolean value
-				if i+1 < len(parts) && !strings.HasPrefix(parts[i+1], "-") {
-					value, err := parseValue(parts[i+1], def.Type)
-					if err == nil {
-						args.Named[name] = ParsedArgument{Name: name, Value: value, RawValue: parts[i+1]}
-						i++ // Skip the value
-					} else {
-						args.Named[name] = ParsedArgument{Name: name, Value: true, RawValue: "true"}
+			// Find matching positional definition
+			var def *ArgumentDefinition
+			for _, d := range defs {
+				if d.Kind == KindPositional && positionalIndex == len(args.Positional) {
+					def = &d
+					break
+				}
+			}
+
+			if def != nil {
+				// Parse value
+				var value string
+				if pos < length && runes[pos] == '"' {
+					pos++ // Skip opening quote
+					var builder strings.Builder
+					for pos < length && runes[pos] != '"' {
+						if runes[pos] == '\\' && pos+1 < length {
+							pos++
+						}
+						builder.WriteRune(runes[pos])
+						pos++
 					}
+					if pos < length {
+						pos++ // Skip closing quote
+					}
+					value = builder.String()
 				} else {
-					args.Named[name] = ParsedArgument{Name: name, Value: true, RawValue: "true"}
+					var builder strings.Builder
+					for pos < length && runes[pos] != ' ' {
+						builder.WriteRune(runes[pos])
+						pos++
+					}
+					value = builder.String()
+				}
+
+				parsedValue, err := parseValue(value, def.Type)
+				if err != nil {
+					return nil, &ArgumentError{def.Name, err.Error()}
+				}
+				args.Positional = append(args.Positional, ParsedArgument{
+					Name:     def.Name,
+					Value:    parsedValue,
+					RawValue: value,
+				})
+				positionalIndex++
+			}
+		}
+	}
+
+	// Check for required arguments
+	for _, def := range defs {
+		if def.Required {
+			if def.Kind == KindPositional {
+				found := false
+				for _, arg := range args.Positional {
+					if arg.Name == def.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return nil, &ArgumentError{def.Name, "required positional argument missing"}
 				}
 			} else {
-				// Non-boolean arguments require a value
-				if i+1 >= len(parts) {
-					return nil, &ArgumentError{name, "no value provided"}
-				}
-
-				// Parse the value
-				value, err := parseValue(parts[i+1], def.Type)
-				if err != nil {
-					return nil, &ArgumentError{name, fmt.Sprintf("invalid value: %v", err)}
-				}
-
-				args.Named[name] = ParsedArgument{Name: name, Value: value, RawValue: parts[i+1]}
-				i++ // Skip the value
-			}
-			namedFound[name] = true
-			continue
-		}
-
-		// Handle positional and variadic args
-		for _, def := range defs {
-			if def.Kind == KindPositional && pos == 0 {
-				value, err := parseValue(part, def.Type)
-				if err != nil {
-					return nil, &ArgumentError{def.Name, fmt.Sprintf("invalid value: %v", err)}
-				}
-				args.Positional = append(args.Positional, ParsedArgument{Name: def.Name, Value: value, RawValue: part})
-				pos++
-				break
-			} else if def.Kind == KindVariadic {
-				value, err := parseValue(part, def.Type)
-				if err != nil {
-					return nil, &ArgumentError{def.Name, fmt.Sprintf("invalid value: %v", err)}
-				}
-				args.Variadic = append(args.Variadic, ParsedArgument{Name: def.Name, Value: value, RawValue: part})
-				break
-			}
-		}
-	}
-
-	// Check required arguments and handle reply type
-	for _, def := range defs {
-		if def.Type == TypeReply {
-			if def.Required && args.Reply == nil {
-				return nil, &ArgumentError{def.Name, "reply to a message is required"}
-			}
-			// For reply type, we don't need to parse a value, just check if we have a reply
-			if msg != nil && msg.ReplyToMessage != nil {
-				args.Reply = msg.ReplyToMessage
-			}
-		} else if def.Required {
-			if def.Kind == KindNamed {
-				if !namedFound[def.Name] {
-					if def.Default != nil {
-						args.Named[def.Name] = ParsedArgument{Name: def.Name, Value: def.Default}
-					} else {
-						return nil, &ArgumentError{def.Name, "required argument not provided"}
-					}
-				}
-			} else if def.Kind == KindPositional && len(args.Positional) == 0 {
-				if def.Default != nil {
-					args.Positional = append(args.Positional, ParsedArgument{Name: def.Name, Value: def.Default})
-				} else {
-					return nil, &ArgumentError{def.Name, "required argument not provided"}
+				if _, ok := args.Named[def.Name]; !ok {
+					return nil, &ArgumentError{def.Name, "required named argument missing"}
 				}
 			}
 		}
 	}
 
-	fmt.Printf("Args: %+v\n", args)
 	return args, nil
 }

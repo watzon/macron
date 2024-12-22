@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-faster/errors"
 	"github.com/joho/godotenv"
@@ -11,13 +12,13 @@ import (
 
 // Config holds all configuration values for the userbot
 type Config struct {
-	Phone      string
-	AppID      int
-	AppHash    string
-	Debug      bool
-	DataDir    string
-	SessionDir string
-	// Command prefix, defaults to "."
+	Phone         string
+	AppID         int
+	AppHash       string
+	Debug         bool
+	DataDir       string
+	SessionDir    string
+	LogChannel    int64
 	CommandPrefix string
 }
 
@@ -57,6 +58,11 @@ func Load() (*Config, error) {
 		cmdPrefix = "."
 	}
 
+	logChannel, err := strconv.ParseInt(strings.TrimPrefix(os.Getenv("LOG_CHANNEL"), "-100"), 10, 64)
+	if err != nil {
+		logChannel = 0
+	}
+
 	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
 		dataDir = "~/.config/macron"
@@ -75,6 +81,7 @@ func Load() (*Config, error) {
 		Debug:         debug,
 		DataDir:       dataDir,
 		SessionDir:    sessionDir,
+		LogChannel:    logChannel,
 		CommandPrefix: cmdPrefix,
 	}, nil
 }

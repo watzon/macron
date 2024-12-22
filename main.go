@@ -1,26 +1,40 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/celestix/gotgproto"
 	"github.com/celestix/gotgproto/sessionMaker"
 	"github.com/glebarez/sqlite"
+	"github.com/gotd/td/tg"
 	"github.com/watzon/macron/command"
 	"github.com/watzon/macron/config"
+	"github.com/watzon/macron/logger"
 	"github.com/watzon/macron/modules"
+	"github.com/watzon/macron/utilities"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	lj "gopkg.in/natefinch/lumberjack.v2"
 )
 
+type Args struct {
+	FillPeerStorage bool
+}
+
+func parseArgs() Args {
+	var args Args
+	flag.BoolVar(&args.FillPeerStorage, "fill-peer-storage", false, "Fill peer storage with known users and channels")
+	flag.Parse()
+	return args
+}
+
 func main() {
 	// Parse command line arguments
-	flag.Parse()
+	args := parseArgs()
 
 	// Load config
 	cfg, err := config.Load()
@@ -30,7 +44,7 @@ func main() {
 	}
 
 	// Set up logging
-	logFilePath := filepath.Join(cfg.SessionDir, fmt.Sprintf("log-%s.txt", time.Now().Format("2006-01-02-15-04-05")))
+	logFilePath := filepath.Join(cfg.SessionDir, "macron.log")
 	fmt.Printf("Logging to %s\n", logFilePath)
 
 	logWriter := zapcore.AddSync(&lj.Logger{
@@ -61,12 +75,22 @@ func main() {
 		lg.Fatal("Failed to create client", zap.Error(err))
 	}
 
+	// Initialize our custom logger
+	if cfg.LogChannel != 0 {
+		channel := client.PeerStorage.GetInputPeerById(cfg.LogChannel)
+		typeName := channel.TypeName()
+		if channel != nil && typeName != "inputPeerEmpty" {
+			logger.Initialize(context.Background(), client, channel.(*tg.InputPeerChannel))
+		}
+	}
+
 	// Set up command registry with config's command prefix
 	registry := command.NewRegistry(cfg.CommandPrefix)
 
 	// Register modules
 	registry.AddModule(modules.NewMiscModule())
 	registry.AddModule(modules.NewUserModule())
+	registry.AddModule(modules.NewExecModule())
 
 	// Register all modules with the dispatcher
 	lg.Info("Registering modules...")
@@ -75,5 +99,19 @@ func main() {
 	// Start the client
 	lg.Info("Starting client...")
 	fmt.Println("Listening for updates. Press Ctrl+C to stop.")
+
+	// Log a message to the log channel
+	// logger.Info("Macron started")
+
+	// Fill peer storage if requested
+	if args.FillPeerStorage {
+		logger.Info("Filling peer storage from dialogs...")
+		if err := utilities.FillPeerStorage(client, 250); err == nil {
+			logger.Info("Peer storage filled successfully")
+		} else {
+			logger.Error("Failed to fill peer storage: %v", err)
+		}
+	}
+
 	client.Idle()
 }
