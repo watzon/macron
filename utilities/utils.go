@@ -251,3 +251,14 @@ func UnbanUser(ctx *ext.Context, chatID int64, userID int64) error {
 	}
 	return nil
 }
+
+func GetEffectiveChatID(u *ext.Update) int64 {
+	id := u.GetChat().GetID()
+	if id == 0 {
+		id = u.GetChannel().GetID()
+	}
+	if id == 0 {
+		id = u.GetUserChat().GetID()
+	}
+	return id
+}

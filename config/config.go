@@ -20,6 +20,15 @@ type Config struct {
 	SessionDir    string
 	LogChannel    int64
 	CommandPrefix string
+
+	OpenRouterAPIKey string
+}
+
+var configInstance *Config
+
+// Instance returns the singleton config instance
+func Instance() *Config {
+	return configInstance
 }
 
 func sessionFolder(phone string) string {
@@ -34,6 +43,10 @@ func sessionFolder(phone string) string {
 
 // Load creates a new Config instance from environment variables
 func Load() (*Config, error) {
+	if configInstance != nil {
+		return configInstance, nil
+	}
+
 	// Load dotenv if available
 	_ = godotenv.Load()
 
@@ -74,14 +87,16 @@ func Load() (*Config, error) {
 		return nil, errors.Wrap(err, "create session dir")
 	}
 
-	return &Config{
-		Phone:         phone,
-		AppID:         appID,
-		AppHash:       appHash,
-		Debug:         debug,
-		DataDir:       dataDir,
-		SessionDir:    sessionDir,
-		LogChannel:    logChannel,
-		CommandPrefix: cmdPrefix,
-	}, nil
+	configInstance = &Config{
+		Phone:            phone,
+		AppID:            appID,
+		AppHash:          appHash,
+		Debug:            debug,
+		DataDir:          dataDir,
+		SessionDir:       sessionDir,
+		LogChannel:       logChannel,
+		CommandPrefix:    cmdPrefix,
+		OpenRouterAPIKey: os.Getenv("OPENROUTER_API_KEY"),
+	}
+	return configInstance, nil
 }

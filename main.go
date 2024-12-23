@@ -32,6 +32,19 @@ func parseArgs() Args {
 	return args
 }
 
+func registerModules(cfg *config.Config) *command.Registry {
+	// Set up command registry with config's command prefix
+	registry := command.NewRegistry(cfg.CommandPrefix)
+
+	registry.AddModule(modules.NewMiscModule())
+	registry.AddModule(modules.NewUserModule())
+	registry.AddModule(modules.NewExecModule())
+	registry.AddModule(modules.NewSystemModule())
+	registry.AddModule(modules.NewLangModule())
+
+	return registry
+}
+
 func main() {
 	// Parse command line arguments
 	args := parseArgs()
@@ -84,14 +97,8 @@ func main() {
 		}
 	}
 
-	// Set up command registry with config's command prefix
-	registry := command.NewRegistry(cfg.CommandPrefix)
-
 	// Register modules
-	registry.AddModule(modules.NewMiscModule())
-	registry.AddModule(modules.NewUserModule())
-	registry.AddModule(modules.NewExecModule())
-	registry.AddModule(modules.NewSystemModule())
+	registry := registerModules(cfg)
 
 	// Register all modules with the dispatcher
 	lg.Info("Registering modules...")

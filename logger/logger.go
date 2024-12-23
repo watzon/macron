@@ -2,10 +2,10 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/celestix/gotgproto"
+	"github.com/celestix/gotgproto/parsemode"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
 )
@@ -46,7 +46,7 @@ func Log(msg string, args ...interface{}) {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 
-	_, err := instance.sender.To(instance.logChannel).Text(instance.ctx, fmt.Sprintf(msg, args...))
+	_, err := instance.sender.To(instance.logChannel).StyledText(instance.ctx, parsemode.StylizeText(msg)...)
 	if err != nil {
 		return
 	}
