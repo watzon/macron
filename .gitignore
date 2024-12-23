@@ -24,3 +24,4 @@ session.json
 *.test
 *.out
 /vendor/
+/tmp/
