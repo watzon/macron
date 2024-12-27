@@ -4,15 +4,30 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
 	cowsay "github.com/Code-Hex/Neo-cowsay"
+	"github.com/PaulSonOfLars/gotgbot/v2"
+	gotgbotext "github.com/PaulSonOfLars/gotgbot/v2/ext"
+	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
+	messagefilters "github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/message"
 	"github.com/celestix/gotgproto/dispatcher"
 	"github.com/celestix/gotgproto/ext"
 	"github.com/celestix/gotgproto/parsemode"
 	"github.com/gotd/td/tg"
 	"github.com/watzon/macron/command"
+)
+
+type botInstance struct {
+	bot     *gotgbot.Bot
+	updater *gotgbotext.Updater
+}
+
+var (
+	activeBots = make(map[string]*botInstance)
+	botsLock   sync.RWMutex
 )
 
 // MiscModule contains miscellaneous utility commands
@@ -37,6 +52,7 @@ func NewMiscModule() *MiscModule {
 	m.AddCommand(leet)
 	m.AddCommand(vaporwave)
 	m.AddCommand(cowsayCmd)
+	m.AddCommand(botbot)
 
 	return m
 }
@@ -225,6 +241,106 @@ var cowsayCmd = command.NewCommand("cowsay").
 			}
 			return cow
 		})
+	})
+
+var botbot = command.NewCommand("botbot").
+	WithUsage("botbot [-stop BOT_USERNAME] [-delete BOT_USERNAME] <bot_token>").
+	WithDescription("Spin up a new bot instance, or manage existing bots").
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "stop",
+			Type:        command.TypeString,
+			Kind:        command.KindNamed,
+			Required:    false,
+			Description: "Stop a running bot by username",
+		},
+		command.ArgumentDefinition{
+			Name:        "tail",
+			Type:        command.TypeBool,
+			Kind:        command.KindNamed,
+			Required:    false,
+			Default:     false,
+			Description: "Tail the bot's logs, sending them to wherever the botbot command was run from",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		// Handle stop flag
+		if stopBot := args.GetString("stop"); stopBot != "" {
+			botsLock.Lock()
+			defer botsLock.Unlock()
+
+			if instance, exists := activeBots[stopBot]; exists {
+				instance.updater.Stop()
+				delete(activeBots, stopBot)
+				_, err := ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Bot @%s has been stopped", stopBot)), nil)
+				return err
+			}
+			_, err := ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Bot @%s not found", stopBot)), nil)
+			return err
+		}
+
+		// Handle new bot creation
+		token := args.GetRestString()
+		if token == "" {
+			_, err := ctx.Reply(u, ext.ReplyTextString("Please provide a bot token"), nil)
+			return err
+		}
+
+		// Create new bot instance with BotOpts
+		bot, err := gotgbot.NewBot(token, &gotgbot.BotOpts{})
+		if err != nil {
+			_, err := ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Failed to create bot: %v", err)), nil)
+			return err
+		}
+
+		// Create dispatcher first
+		dispatcher := gotgbotext.NewDispatcher(&gotgbotext.DispatcherOpts{
+			// Error handler
+			Error: func(b *gotgbot.Bot, ctx *gotgbotext.Context, err error) gotgbotext.DispatcherAction {
+				fmt.Printf("Error handling update: %v\n", err)
+				return gotgbotext.DispatcherActionNoop
+			},
+		})
+
+		// Add /help command handler to dispatcher
+		dispatcher.AddHandler(handlers.NewCommand("help", func(b *gotgbot.Bot, ctx *gotgbotext.Context) error {
+			_, err := ctx.EffectiveMessage.Reply(b, "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", &gotgbot.SendMessageOpts{})
+			return err
+		}))
+
+		// Check if tail flag is set. If so log all incoming updates to the EffectiveChat
+		if args.GetBool("tail") {
+			dispatcher.AddHandler(handlers.NewMessage(messagefilters.All, func(b *gotgbot.Bot, ctx *gotgbotext.Context) error {
+				fmt.Printf("Received update: %+v\n", ctx.EffectiveMessage)
+				return nil
+			}))
+		}
+
+		// Create updater with dispatcher
+		updater := gotgbotext.NewUpdater(dispatcher, &gotgbotext.UpdaterOpts{
+			ErrorLog: nil,
+			UnhandledErrFunc: func(err error) {
+				fmt.Printf("Unhandled error: %v\n", err)
+			},
+		})
+
+		// Start receiving updates
+		err = updater.StartPolling(bot, &gotgbotext.PollingOpts{})
+		if err != nil {
+			_, err := ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Failed to start bot: %v", err)), nil)
+			return err
+		}
+
+		// Store both bot and updater in active bots map
+		botsLock.Lock()
+		activeBots[bot.User.Username] = &botInstance{
+			bot:     bot,
+			updater: updater,
+		}
+		botsLock.Unlock()
+
+		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Bot @%s is now running!", bot.User.Username)), nil)
+		return err
 	})
 
 func handleTextCommand(ctx *ext.Context, u *ext.Update, args *command.Arguments, transform func(string) string) error {
