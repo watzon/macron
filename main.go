@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/celestix/gotgproto"
+	"github.com/celestix/gotgproto/ext"
 	"github.com/celestix/gotgproto/sessionMaker"
 	"github.com/glebarez/sqlite"
 	"github.com/gotd/td/tg"
@@ -41,6 +42,14 @@ func registerModules(cfg *config.Config) *command.Registry {
 	registry.AddModule(modules.NewExecModule())
 	registry.AddModule(modules.NewSystemModule())
 	registry.AddModule(modules.NewLangModule())
+	registry.AddModule(modules.NewUtilitiesModule())
+
+	for _, module := range registry.GetModules() {
+		fmt.Printf("Registered module: %s\n", module.Name())
+		for _, command := range module.GetCommands() {
+			fmt.Printf("Registered command: %s\n", command.Name)
+		}
+	}
 
 	return registry
 }
@@ -82,6 +91,13 @@ func main() {
 			Session:        sessionMaker.SqlSession(sqlite.Open(filepath.Join(cfg.SessionDir, "session.db"))),
 			Logger:         lg,
 			AutoFetchReply: true,
+			ErrorHandler: func(ctx *ext.Context, u *ext.Update, err string) error {
+				logger.Error(err)
+				return nil
+			},
+			PanicHandler: func(ctx *ext.Context, u *ext.Update, msg string) {
+				logger.Error(msg)
+			},
 		},
 	)
 	if err != nil {

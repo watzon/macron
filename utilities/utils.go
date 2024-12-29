@@ -3,6 +3,8 @@ package utilities
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -261,4 +263,83 @@ func GetEffectiveChatID(u *ext.Update) int64 {
 		id = u.GetUserChat().GetID()
 	}
 	return id
+}
+
+func GetMediaFileNameWithId(media tg.MessageMediaClass) (string, error) {
+	switch v := media.(type) {
+	case *tg.MessageMediaPhoto: // messageMediaPhoto#695150d7
+		f, ok := v.Photo.AsNotEmpty()
+		if !ok {
+			return "", fmt.Errorf("unknown media type")
+		}
+
+		return fmt.Sprintf("%d.png", f.ID), nil
+	case *tg.MessageMediaDocument: // messageMediaDocument#4cf4d72d
+		var (
+			attr             tg.DocumentAttributeClass
+			ok               bool
+			filenameFromAttr *tg.DocumentAttributeFilename
+			f                *tg.Document
+			filename         = "undefined"
+		)
+
+		f, ok = v.Document.AsNotEmpty()
+		if !ok {
+			return "", fmt.Errorf("unknown media type")
+		}
+
+		for _, attr = range f.Attributes {
+			filenameFromAttr, ok = attr.(*tg.DocumentAttributeFilename)
+			if ok {
+				filename = filenameFromAttr.FileName
+			}
+
+			videoAttr, ok := attr.(*tg.DocumentAttributeVideo)
+			if ok && videoAttr.RoundMessage {
+				fmt.Println(videoAttr.String())
+				filename = fmt.Sprintf("round%d.mp4", f.ID)
+			}
+
+		}
+
+		return fmt.Sprintf("%d-%s", f.ID, filename), nil
+	case *tg.MessageMediaStory: // messageMediaStory#68cb6283
+		f, ok := v.Story.(*tg.StoryItem)
+		if !ok {
+			return "", fmt.Errorf("unknown media type")
+		}
+		return GetMediaFileNameWithId(f.Media)
+	}
+	return "", fmt.Errorf("unknown media type")
+}
+
+func DownloadMessageMedia(ctx *ext.Context, msg *tg.Message) (string, error) {
+	media, ok := msg.GetMedia()
+	if !ok {
+		return "", fmt.Errorf("no media found in the message")
+	}
+
+	filename, err := GetMediaFileNameWithId(media)
+	if err != nil {
+		return "", fmt.Errorf("failed to get media filename: %w", err)
+	}
+
+	// Split filename and extension
+	extension := filepath.Ext(filename)
+	name := strings.TrimSuffix(filename, extension)
+
+	// Create temp file with pattern that puts extension at end
+	tmpFilem, err := os.CreateTemp(os.TempDir(), name+"*"+extension)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+
+	defer tmpFilem.Close()
+
+	_, err = ctx.DownloadMedia(media, ext.DownloadOutputPath(tmpFilem.Name()), nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to download media: %w", err)
+	}
+
+	return tmpFilem.Name(), nil
 }

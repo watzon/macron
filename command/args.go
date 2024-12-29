@@ -321,9 +321,6 @@ func parseValue(value string, argType ArgumentType) (interface{}, error) {
 	case TypeEntity:
 		// For entities, we store the raw value and resolve it later when we have context
 		return value, nil
-	case TypeReply:
-		// Reply type doesn't use the value parameter, it's handled by storing the reply message in Arguments.Reply
-		return nil, nil
 	case TypeDuration:
 		d, err := hdur.ParseDuration(value)
 		if err != nil {
@@ -341,7 +338,7 @@ func ParseArguments(text string, defs []ArgumentDefinition, msg *types.Message) 
 		Named:      make(map[string]ParsedArgument),
 		Positional: make([]ParsedArgument, 0),
 		Raw:        text,
-		Reply:      msg,
+		Reply:      msg.ReplyToMessage,
 	}
 
 	// Initialize runes for character-by-character parsing
@@ -522,23 +519,39 @@ func ParseArguments(text string, defs []ArgumentDefinition, msg *types.Message) 
 		}
 	}
 
-	// Check for required arguments
+	// Check for required arguments and apply defaults
 	for _, def := range defs {
-		if def.Required {
-			if def.Kind == KindPositional {
-				found := false
-				for _, arg := range args.Positional {
-					if arg.Name == def.Name {
-						found = true
-						break
+		if def.Kind == KindNamed {
+			if _, ok := args.Named[def.Name]; !ok {
+				if def.Required {
+					return nil, &ArgumentError{def.Name, "required named argument missing"}
+				} else if def.Default != nil {
+					// Apply default value for named arguments
+					args.Named[def.Name] = ParsedArgument{
+						Name:     def.Name,
+						Value:    def.Default,
+						RawValue: fmt.Sprint(def.Default),
 					}
 				}
-				if !found {
-					return nil, &ArgumentError{def.Name, "required positional argument missing"}
+			}
+		} else if def.Kind == KindPositional {
+			found := false
+			for _, arg := range args.Positional {
+				if arg.Name == def.Name {
+					found = true
+					break
 				}
-			} else {
-				if _, ok := args.Named[def.Name]; !ok {
-					return nil, &ArgumentError{def.Name, "required named argument missing"}
+			}
+			if !found {
+				if def.Required {
+					return nil, &ArgumentError{def.Name, "required positional argument missing"}
+				} else if def.Default != nil {
+					// Apply default value for positional arguments
+					args.Positional = append(args.Positional, ParsedArgument{
+						Name:     def.Name,
+						Value:    def.Default,
+						RawValue: fmt.Sprint(def.Default),
+					})
 				}
 			}
 		}

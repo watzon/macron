@@ -1,7 +1,9 @@
 package modules
 
 import (
+	"bytes"
 	"fmt"
+	"image/png"
 	"math/rand"
 	"strings"
 	"sync"
@@ -16,8 +18,10 @@ import (
 	"github.com/celestix/gotgproto/dispatcher"
 	"github.com/celestix/gotgproto/ext"
 	"github.com/celestix/gotgproto/parsemode"
+	"github.com/celestix/gotgproto/types"
 	"github.com/gotd/td/tg"
 	"github.com/watzon/macron/command"
+	"github.com/watzon/macron/utilities"
 )
 
 type botInstance struct {
@@ -53,6 +57,7 @@ func NewMiscModule() *MiscModule {
 	m.AddCommand(vaporwave)
 	m.AddCommand(cowsayCmd)
 	m.AddCommand(botbot)
+	m.AddCommand(screenshot)
 
 	return m
 }
@@ -340,6 +345,174 @@ var botbot = command.NewCommand("botbot").
 		botsLock.Unlock()
 
 		_, err = ctx.Reply(u, ext.ReplyTextString(fmt.Sprintf("Bot @%s is now running!", bot.User.Username)), nil)
+		return err
+	})
+
+var screenshot = command.NewCommand("screenshot").
+	WithUsage("screenshot [-count N]").
+	WithDescription("Creates a fake screenshot of messages. If -count is provided, includes N messages before the replied message. Otherwise only shows the replied message.").
+	WithAliases("sc").
+	WithOutgoing(true).
+	WithIncoming(false).
+	WithArguments(
+		command.ArgumentDefinition{
+			Name:        "count",
+			Type:        command.TypeInt,
+			Kind:        command.KindNamed,
+			Required:    false,
+			Default:     0,
+			Description: "Number of messages to include before the replied message",
+		},
+	).
+	WithHandler(func(ctx *ext.Context, u *ext.Update, args *command.Arguments) error {
+		if u.EffectiveMessage.ReplyToMessage == nil {
+			_, err := ctx.Reply(u, ext.ReplyTextString("Please reply to a message to create a screenshot"), &ext.ReplyOpts{})
+			return err
+		}
+
+		count := args.GetInt("count")
+
+		// Collect messages and their data
+		var messages []utilities.MessageData
+
+		// Add the replied message first
+		replyMsg := u.EffectiveMessage.ReplyToMessage
+		if replyMsg.Message != nil {
+			user, err := utilities.UserFromMessage(ctx, replyMsg.Message)
+			if err != nil {
+				user = &types.User{FirstName: "Unknown User"}
+			}
+
+			// Get user avatar
+			avatar, err := utilities.GetUserAvatar(ctx, user)
+			if err != nil {
+				// Continue without avatar if we can't get it
+				fmt.Printf("Failed to get avatar for user %s: %v\n", utilities.FormatUserName(user), err)
+			}
+
+			messages = append(messages, utilities.MessageData{
+				User:      user,
+				Text:      replyMsg.Message.Message,
+				Entities:  replyMsg.Message.Entities,
+				Avatar:    avatar,
+				Timestamp: int64(replyMsg.Message.Date),
+			})
+		}
+
+		// Get previous messages if count > 0
+		if count > 0 {
+			// Get message history
+			history, err := ctx.Raw.MessagesGetHistory(ctx.Context, &tg.MessagesGetHistoryRequest{
+				Peer:      u.EffectiveChat().GetInputPeer(),
+				OffsetID:  replyMsg.Message.ID,
+				AddOffset: 0,
+				Limit:     count,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get message history: %w", err)
+			}
+
+			switch m := history.(type) {
+			case *tg.MessagesChannelMessages:
+				for _, msg := range m.Messages {
+					if msg, ok := msg.(*tg.Message); ok {
+						if msg.Message == "" {
+							continue
+						}
+						user, err := utilities.UserFromMessage(ctx, msg)
+						if err != nil {
+							user = &types.User{FirstName: "Unknown User"}
+						}
+
+						// Get user avatar
+						avatar, err := utilities.GetUserAvatar(ctx, user)
+						if err != nil {
+							// Continue without avatar if we can't get it
+							fmt.Printf("Failed to get avatar for user %s: %v\n", utilities.FormatUserName(user), err)
+						}
+
+						messages = append([]utilities.MessageData{{
+							User:      user,
+							Text:      msg.Message,
+							Entities:  msg.Entities,
+							Avatar:    avatar,
+							Timestamp: int64(msg.Date),
+						}}, messages...)
+					}
+				}
+			case *tg.MessagesMessages:
+				for _, msg := range m.Messages {
+					if msg, ok := msg.(*tg.Message); ok {
+						if msg.Message == "" {
+							continue
+						}
+						user, err := utilities.UserFromMessage(ctx, msg)
+						if err != nil {
+							user = &types.User{FirstName: "Unknown User"}
+						}
+
+						// Get user avatar
+						avatar, err := utilities.GetUserAvatar(ctx, user)
+						if err != nil {
+							// Continue without avatar if we can't get it
+							fmt.Printf("Failed to get avatar for user %s: %v\n", utilities.FormatUserName(user), err)
+						}
+
+						messages = append([]utilities.MessageData{{
+							User:      user,
+							Text:      msg.Message,
+							Entities:  msg.Entities,
+							Avatar:    avatar,
+							Timestamp: int64(msg.Date),
+						}}, messages...)
+					}
+				}
+			}
+		}
+
+		// Generate the screenshot
+		style := utilities.DefaultMessageStyle()
+		img, err := utilities.GenerateMessageScreenshot(messages, style)
+		if err != nil {
+			return fmt.Errorf("failed to generate screenshot: %v", err)
+		}
+
+		// Convert image to bytes
+		var buf bytes.Buffer
+		err = png.Encode(&buf, img)
+		if err != nil {
+			return fmt.Errorf("failed to encode image: %v", err)
+		}
+
+		// Create a random ID for the file
+		fileID := rand.Int63()
+
+		// Upload the file data first
+		uploaded, err := ctx.Raw.UploadSaveFilePart(ctx.Context, &tg.UploadSaveFilePartRequest{
+			FileID:   fileID,
+			FilePart: 0,
+			Bytes:    buf.Bytes(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to upload file: %w", err)
+		}
+		if !uploaded {
+			return fmt.Errorf("failed to upload file: server returned false")
+		}
+
+		// Send the image
+		_, err = ctx.SendMedia(u.EffectiveChat().GetID(), &tg.MessagesSendMediaRequest{
+			Media: &tg.InputMediaUploadedPhoto{
+				File: &tg.InputFile{
+					ID:    fileID,
+					Name:  "screenshot.png",
+					Parts: 1,
+				},
+			},
+			ReplyTo: &tg.InputReplyToMessage{
+				ReplyToMsgID: u.EffectiveMessage.ID,
+			},
+		})
 		return err
 	})
 

@@ -18,6 +18,10 @@ type Module interface {
 	Name() string
 	// Description returns the module's description
 	Description() string
+	// AddCommand adds a command to the module
+	AddCommand(cmd *Command)
+	// GetCommands returns the module's commands
+	GetCommands() []*Command
 }
 
 // BaseModule provides a default implementation of Module
@@ -49,6 +53,11 @@ func (m *BaseModule) Description() string {
 // AddCommand adds a command to the module
 func (m *BaseModule) AddCommand(cmd *Command) {
 	m.commands = append(m.commands, cmd)
+}
+
+// GetCommands returns the module's commands
+func (m *BaseModule) GetCommands() []*Command {
+	return m.commands
 }
 
 // Load registers all module commands with the dispatcher
@@ -163,7 +172,14 @@ func (c *Command) Register(d dispatcher.Dispatcher, defaultPrefix string) {
 	// Create message filter for messages that match the command or its aliases
 	createMessageFilter := func(cmdName string) func(m *types.Message) bool {
 		return func(m *types.Message) bool {
+			// Check if message starts with the command
 			if !strings.HasPrefix(m.Text, prefix+cmdName) {
+				return false
+			}
+
+			// Check if it's an exact match or followed by a space or end of string
+			cmdLen := len(prefix + cmdName)
+			if len(m.Text) > cmdLen && m.Text[cmdLen] != ' ' {
 				return false
 			}
 

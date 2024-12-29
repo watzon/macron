@@ -15,6 +15,7 @@ require (
 	github.com/caarlos0/env/v11 v11.2.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -28,6 +29,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
+	golang.org/x/image v0.23.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.12 // indirect
@@ -64,6 +66,7 @@ require (
 require (
 	github.com/Code-Hex/Neo-cowsay v1.0.4
 	github.com/PaulSonOfLars/gotgbot/v2 v2.0.0-rc.30
+	github.com/fogleman/gg v1.3.0
 	github.com/traefik/yaegi v0.16.1
 	github.com/watzon/hdur v1.0.0
 )
